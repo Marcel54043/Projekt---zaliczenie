@@ -3,6 +3,7 @@ import mimetypes
 import os
 import json
 import yaml
+import xml.etree.ElementTree as ET
 
 
 def load_json(filename):
@@ -20,6 +21,14 @@ def load_yaml(filename):
         return data
 
 
+def load_xml(filename):
+    tree = ET.parse(filename)
+    root = tree.getroot()
+    data = ET.tostring(root, encoding='unicode')
+    print(f"Zawartość pliku XML:\n{data}")
+    return tree
+
+
 def save_json(data, filename):
     with open(filename, 'w') as output_file:
         json.dump(data, output_file, indent=4)
@@ -32,14 +41,19 @@ def save_yaml(data, filename):
     print(f"Dane zostały zapisane do pliku {filename} w formacie YAML")
 
 
+def save_xml(tree, filename):
+    tree.write(filename, encoding='unicode', xml_declaration=True)
+    print(f"Dane zostały zapisane do pliku {filename} w formacie XML")
+
+
 def main():
     parser = argparse.ArgumentParser(
-        description='konwerter')
+        description='Prosty program do wyświetlania i zapisywania informacji o plikach JSON, YAML i XML.')
 
     parser.add_argument('filename', type=str, help='Ścieżka do pliku do przetworzenia')
     parser.add_argument('-o', '--output', type=str, help='Ścieżka do pliku wyjściowego')
-    parser.add_argument('-f', '--format', type=str, choices=['json', 'yaml'],
-                        help='Format pliku wyjściowego (json lub yaml)')
+    parser.add_argument('-f', '--format', type=str, choices=['json', 'yaml', 'xml'],
+                        help='Format pliku wyjściowego (json, yaml lub xml)')
 
     args = parser.parse_args()
 
@@ -51,7 +65,6 @@ def main():
 
     print(f"Nazwa pliku: {os.path.basename(filename)}")
 
-
     mime_type, _ = mimetypes.guess_type(filename)
     if mime_type is None:
 
@@ -59,6 +72,8 @@ def main():
             mime_type = 'application/json'
         elif filename.endswith('.yaml') or filename.endswith('.yml'):
             mime_type = 'application/x-yaml'
+        elif filename.endswith('.xml'):
+            mime_type = 'application/xml'
         else:
             mime_type = 'Nieznany'
 
@@ -69,13 +84,15 @@ def main():
             data = load_json(filename)
         elif mime_type == 'application/x-yaml':
             data = load_yaml(filename)
+        elif mime_type == 'application/xml':
+            data = load_xml(filename)
         else:
-            print(f"Plik {filename} nie jest obsługiwanym typem pliku (JSON lub YAML).")
+            print(f"Plik {filename} nie jest obsługiwanym typem pliku (JSON, YAML lub XML).")
             return
 
         if args.output:
             if not args.format:
-                print("Proszę podać format wyjściowy za pomocą opcji -f lub --format (json lub yaml).")
+                print("Proszę podać format wyjściowy za pomocą opcji -f lub --format (json, yaml lub xml).")
                 return
 
             try:
@@ -83,9 +100,13 @@ def main():
                     save_json(data, args.output)
                 elif args.format == 'yaml':
                     save_yaml(data, args.output)
+                elif args.format == 'xml' and isinstance(data, ET.ElementTree):
+                    save_xml(data, args.output)
+                else:
+                    print(f"Nieprawidłowy format danych do zapisania w formacie {args.format}")
             except Exception as e:
                 print(f"Nie udało się zapisać danych do pliku {args.output}: {e}")
-    except (json.JSONDecodeError, yaml.YAMLError) as e:
+    except (json.JSONDecodeError, yaml.YAMLError, ET.ParseError) as e:
         print(f"Nie udało się odczytać pliku {filename}: Błąd składni - {e}")
     except Exception as e:
         print(f"Nie udało się odczytać pliku {filename}: {e}")
