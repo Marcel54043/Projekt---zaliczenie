@@ -33,7 +33,7 @@ def load_xml(filename):
     return tree
 
 
-def save_json(data, filename):
+def save_json(data, filename): 
     with open(filename, 'w') as output_file:
         json.dump(data, output_file, indent=4)
     print(f"Dane zostały zapisane do pliku {filename} w formacie JSON")
